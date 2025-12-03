@@ -43,7 +43,7 @@
     <p><strong>Instructor:</strong> Ph.D. Ana Rodrigues</p>
     <p><strong>Team Members:</strong></p>
     <ul>
-      <li>Kevante trudge</li>
+      <li>Kevante Trudge</li>
       <li>Devin Deschamps</li>
       <li>Muhammad Inshal</li>
       <li>Tony Mensah</li>
@@ -53,7 +53,7 @@
   <section id="introduction">
     <h2>Introduction</h2>
     <p>This project uses an <strong>Arduino Uno</strong>, an <strong>HC-SR04 ultrasonic sensor</strong>, a
-      <strong>Humidity and Temperature sensor</strong>, and <strong>red/yellow/green LEDs</strong> to provide proximity-based
+      <strong>Humidity and Temperature sensor</strong>, and <strong>red/blue/green LEDs</strong> to provide proximity-based
       Temperature and Humidity readings to your environment, similar to home and office thermostats systems.
     </p>
   </section>
@@ -62,7 +62,7 @@
     <h2>Circuit Diagram</h2>
     <p>The ultrasonic sensor measures distance; the Arduino activates LEDs and the Temperature and Humidity sensor according to distance
       thresholds, Then it makes a baseline and tells you if its hot/cold and too/less humid.</p>
-    <img src="Screenshot 2025-11-12 135852.png" alt="Arduino Environmental sensor system">
+    <img src="thumbnail_IMG_4801.jpg" alt="Arduino Environmental sensor system">
   </section>
 
   <section id="environment">
@@ -113,7 +113,7 @@
           <td><a href="https://www.sparkfun.com/passive-buzzer-module.html">SparkFun</a></td>
         </tr>
         <tr>
-          <td>LEDs (Red, Yellow, Green)</td>
+          <td>LEDs (Red, Blue, Green)</td>
           <td>6</td>
           <td>$0.48/0.76/1.04</td>
           <td>$2.28</td>
@@ -134,15 +134,15 @@
           <td><a href="https://www.canadarobotix.com/products/1754">canadarobotix</a></td>
         </tr>
         <tr>
-          <td>Jumper Wires</td>
-          <td>1 set</td>
+          <td>Jumper Wire Set</td>
+          <td>1</td>
           <td>$14.00</td>
           <td>$14.00</td>
           <td><a href="https://www.amazon.com/dp/B0BTT48V7P">amazon</a>
           </td>
         </tr>
         <tr>
-          <td>USB cable</td>
+          <td>USB Cable</td>
           <td>1</td>
           <td>$16.80</td>
           <td>$16.80</td>
@@ -166,32 +166,40 @@
   </section>
 
   <section id="code">
-    <h2>Tinkercad Code</h2>
-    <p>The following Arduino code controls the system, lighting LEDs and activating the buzzer based on distance
+    <h2>Arduino Code</h2>
+    <p>The following Arduino code controls the system lighting LEDs based on distance
       readings from the HC-SR04 sensor.</p>
 
     <pre class="line-numbers">
   <button class="copy-btn" onclick="copyCode()">Copy</button>
   <code id="arduinoCode" class="language-cpp">
-// ==== Sensor Pin Definitions ====
+// ==== Libraries ====
 
-const int tempPin = A0;   // Temperature sensor analog input
+#include <dht11.h>
 
-const int humidityPin = A1; // Humidity sensor analog input
+dht11 DHT11;
 
-const int TrigPin = 2;    // Ultrasonic Trig
 
-const int EchoPin = 3;    // Ultrasonic Echo
+
+#define DHT11PIN A0 // DHT11 data pin
+
+
+
+// ==== Ultrasonic Sensor Pins ====
+
+const int TrigPin = 2;
+
+const int EchoPin = 3;
 
 
 
 // ==== Humidity LED Output Pins ====
 
-const int greenLED = 11;   // Normal humidity (±10%)
+const int greenLED = 11; // Normal humidity (±10%)
 
-const int redLED  = 12;   // Below 10% of baseline
+const int redLED = 12;  // Below 10% of baseline
 
-const int blueLED = 13;   // Above 10% of baseline
+const int blueLED = 13;  // Above 10% of baseline
 
 
 
@@ -199,25 +207,17 @@ const int blueLED = 13;   // Above 10% of baseline
 
 const int tempNormalLED = 5; // ±3 °C of baseline
 
-const int tempHotLED  = 6; // > +3 °C
+const int tempHotLED = 6;  // > +3 °C
 
-const int tempColdLED  = 7; // < -3 °C
+const int tempColdLED = 7;  // < -3 °C
 
 
 
 // ==== Variables ====
 
-int RawValue = 0;
+float humidityPercent = 0;
 
-double Voltage = 0;
-
-double tempC = 0;
-
-double tempF = 0;
-
-int humidityValue = 0;
-
-float distanceCm = 0;
+float tempC = 0;
 
 
 
@@ -225,63 +225,45 @@ float baselineHumidity = 0;
 
 float baselineTemp = 0;
 
-int humidityPercent = 0;
 
-bool objectIsClose = false;  // tracks whether something is within 50 cm
+
+float distanceCm = 0;
+
+bool objectIsClose = false;
 
 
 
 void setup() {
 
- Serial.begin(9600);
-
- pinMode(humidityPin, INPUT);
-
- pinMode(TrigPin, OUTPUT);
-
- pinMode(EchoPin, INPUT);
+  Serial.begin(9600);
 
 
 
- // Humidity LEDs
+  pinMode(TrigPin, OUTPUT);
 
- pinMode(greenLED, OUTPUT);
-
- pinMode(redLED, OUTPUT);
-
- pinMode(blueLED, OUTPUT);
+  pinMode(EchoPin, INPUT);
 
 
 
- // Temperature LEDs
+  // LEDs
 
- pinMode(tempNormalLED, OUTPUT);
+  pinMode(greenLED, OUTPUT);
 
- pinMode(tempHotLED, OUTPUT);
+  pinMode(redLED, OUTPUT);
 
- pinMode(tempColdLED, OUTPUT);
+  pinMode(blueLED, OUTPUT);
 
+  pinMode(tempNormalLED, OUTPUT);
 
+  pinMode(tempHotLED, OUTPUT);
 
- // Turn all LEDs off at start
-
- digitalWrite(greenLED, LOW);
-
- digitalWrite(redLED, LOW);
-
- digitalWrite(blueLED, LOW);
-
- digitalWrite(tempNormalLED, LOW);
-
- digitalWrite(tempHotLED, LOW);
-
- digitalWrite(tempColdLED, LOW);
+  pinMode(tempColdLED, OUTPUT);
 
 
 
- Serial.println("System starting...");
+  Serial.println("System starting...");
 
- Serial.println("Waiting for object within 50 cm to record baselines...");
+  Serial.println("Waiting for object within 50 cm to record baselines...");
 
 }
 
@@ -289,271 +271,244 @@ void setup() {
 
 void loop() {
 
- // ==== Temperature Sensor ====
-
- RawValue = analogRead(tempPin);
-
- Voltage = (RawValue / 1023.0) * 5000; // in millivolts
-
- tempC = (Voltage - 500) * 0.1;    // Convert mV to °C
-
- tempF = (tempC * 1.8) + 32;      // Convert °C to °F
 
 
+  // ==== Read DHT11 ====
 
- // ==== Humidity Sensor ====
+  DHT11.read(DHT11PIN);
+  
 
- humidityValue = analogRead(humidityPin);
-
- humidityPercent = map(humidityValue, 0, 1023, 10, 70); // adjust as needed
+  tempC = DHT11.temperature;
+  
+  humidityPercent = DHT11.humidity;
 
 
 
- // ==== Ultrasonic Distance ====
+  // ==== Ultrasonic Distance ====
 
- digitalWrite(TrigPin, LOW);
+  digitalWrite(TrigPin, LOW);
 
- delayMicroseconds(2);
+  delayMicroseconds(2);
 
- digitalWrite(TrigPin, HIGH);
+  digitalWrite(TrigPin, HIGH);
 
- delayMicroseconds(10);
+  delayMicroseconds(10);
 
- digitalWrite(TrigPin, LOW);
+  digitalWrite(TrigPin, LOW);
 
- distanceCm = pulseIn(EchoPin, HIGH) / 58.0; // Convert to cm
-
- distanceCm = (int(distanceCm * 100.0)) / 100.0;
+  distanceCm = pulseIn(EchoPin, HIGH) / 58.0;
 
 
 
- // ==== Distance and Baseline Logic ====
+  // ==== Distance & Baseline Logic ====
 
- if (distanceCm <= 50 && distanceCm > 0) {
-
-  // Object just came within 50 cm → record new baselines
-
-  if (!objectIsClose) {
-
-   objectIsClose = true;
+  if (distanceCm <= 50 && distanceCm > 0) {
 
 
 
-   // --- Record new humidity baseline ---
+    if (!objectIsClose) {
 
-   int totalHum = 0;
-
-   for (int i = 0; i < 10; i++) {
-
-    totalHum += analogRead(humidityPin);
-
-    delay(50);
-
-   }
-
-   int avgHumidityValue = totalHum / 10;
-
-   baselineHumidity = map(avgHumidityValue, 0, 1023, 10, 70);
+      objectIsClose = true;
 
 
 
-   // --- Record new temperature baseline ---
+      // Record new baselines (take 10 readings)
 
-   int totalTemp = 0;
+      float humSum = 0;
 
-   for (int i = 0; i < 10; i++) {
-
-    totalTemp += analogRead(tempPin);
-
-    delay(50);
-
-   }
-
-   double avgTempRaw = totalTemp / 10.0;
-
-   double avgTempVoltage = (avgTempRaw / 1023.0) * 5000; // mV
-
-   baselineTemp = (avgTempVoltage - 500) * 0.1;     // °C baseline
+      float tempSum = 0;
 
 
 
-   Serial.println("=== New Baselines Recorded ===");
+      for (int i = 0; i < 10; i++) {
 
-   Serial.print("Humidity Baseline: ");
+        DHT11.read(DHT11PIN);
 
-   Serial.print(baselineHumidity);
+        humSum += DHT11.humidity;
 
-   Serial.println("%");
+        tempSum += DHT11.temperature;
 
-   Serial.print("Temperature Baseline: ");
+        delay(100);
 
-   Serial.print(baselineTemp, 1);
+      }
 
-   Serial.println(" °C");
 
-   Serial.println("==============================");
+
+      baselineHumidity = humSum / 10.0;
+
+      baselineTemp = tempSum / 10.0;
+
+
+
+      Serial.println("=== New Baselines Recorded ===");
+
+      Serial.print("Humidity Baseline: ");
+
+      Serial.print(baselineHumidity);
+
+      Serial.println("%");
+
+      Serial.print("Temperature Baseline: ");
+
+      Serial.print(baselineTemp);
+
+      Serial.println(" °C");
+
+      Serial.println("==============================");
+
+    }
+
+
+
+    // ==== Humidity LED Logic ====
+
+    float lowHum = baselineHumidity * 0.9;
+
+    float highHum = baselineHumidity * 1.1;
+
+
+
+    if (humidityPercent < lowHum) {
+
+      digitalWrite(redLED, HIGH);
+
+      digitalWrite(greenLED, LOW);
+
+      digitalWrite(blueLED, LOW);
+
+    } 
+
+    else if (humidityPercent > highHum) {
+
+      digitalWrite(redLED, LOW);
+
+      digitalWrite(greenLED, LOW);
+
+      digitalWrite(blueLED, HIGH);
+
+    } 
+
+    else {
+
+      digitalWrite(redLED, LOW);
+
+      digitalWrite(greenLED, HIGH);
+
+      digitalWrite(blueLED, LOW);
+
+    }
+
+
+
+    // ==== Temperature LED Logic ====
+
+    float lowTemp = baselineTemp - 3;
+
+    float highTemp = baselineTemp + 3;
+
+
+
+    if (tempC < lowTemp) {
+
+      digitalWrite(tempColdLED, HIGH);
+
+      digitalWrite(tempNormalLED, LOW);
+
+      digitalWrite(tempHotLED, LOW);
+
+    }
+
+    else if (tempC > highTemp) {
+
+      digitalWrite(tempColdLED, LOW);
+
+      digitalWrite(tempNormalLED, LOW);
+
+      digitalWrite(tempHotLED, HIGH);
+
+    }
+
+    else {
+
+      digitalWrite(tempColdLED, LOW);
+
+      digitalWrite(tempNormalLED, HIGH);
+
+      digitalWrite(tempHotLED, LOW);
+
+    }
 
   }
 
 
-
-  // ==== Humidity LED Logic ====
-
-  float lowerHum = baselineHumidity * 0.9;
-
-  float upperHum = baselineHumidity * 1.1;
-
-
-
-  if (humidityPercent < lowerHum) {
-
-   digitalWrite(redLED, HIGH);
-
-   digitalWrite(greenLED, LOW);
-
-   digitalWrite(blueLED, LOW);
-
-  } 
-
-  else if (humidityPercent > upperHum) {
-
-   digitalWrite(redLED, LOW);
-
-   digitalWrite(greenLED, LOW);
-
-   digitalWrite(blueLED, HIGH);
-
-  } 
 
   else {
 
-   digitalWrite(redLED, LOW);
-
-   digitalWrite(greenLED, HIGH);
-
-   digitalWrite(blueLED, LOW);
-
-  }
+    objectIsClose = false;
 
 
 
-  // ==== Temperature LED Logic ====
+    // Turn LEDs off
 
-  float lowerTemp = baselineTemp - 3.0;
+    digitalWrite(redLED, LOW);
 
-  float upperTemp = baselineTemp + 3.0;
+    digitalWrite(greenLED, LOW);
 
+    digitalWrite(blueLED, LOW);
 
+    digitalWrite(tempColdLED, LOW);
 
-  if (tempC < lowerTemp) {
+    digitalWrite(tempNormalLED, LOW);
 
-   digitalWrite(tempColdLED, HIGH);
-
-   digitalWrite(tempNormalLED, LOW);
-
-   digitalWrite(tempHotLED, LOW);
-
-  }
-
-  else if (tempC > upperTemp) {
-
-   digitalWrite(tempColdLED, LOW);
-
-   digitalWrite(tempNormalLED, LOW);
-
-   digitalWrite(tempHotLED, HIGH);
-
-  }
-
-  else {
-
-   digitalWrite(tempColdLED, LOW);
-
-   digitalWrite(tempNormalLED, HIGH);
-
-   digitalWrite(tempHotLED, LOW);
+    digitalWrite(tempHotLED, LOW);
 
   }
 
 
 
- } else {
+  // ==== Serial Output ====
 
-  // Object moved away (> 50 cm)
+  Serial.println("===== Sensor Readings =====");
 
-  objectIsClose = false;
+  Serial.print("Temperature: ");
 
+  Serial.print(tempC);
 
-
-  // Turn all LEDs off
-
-  digitalWrite(redLED, LOW);
-
-  digitalWrite(greenLED, LOW);
-
-  digitalWrite(blueLED, LOW);
-
-  digitalWrite(tempColdLED, LOW);
-
-  digitalWrite(tempNormalLED, LOW);
-
-  digitalWrite(tempHotLED, LOW);
-
- }
+  Serial.println(" °C");
 
 
 
- // ==== Serial Output ====
+  Serial.print("Humidity: ");
 
- Serial.println("===== Sensor Readings =====");
+  Serial.print(humidityPercent);
 
- Serial.print("Temperature: ");
-
- Serial.print(tempC, 1);
-
- Serial.print(" °C / ");
-
- Serial.print(tempF, 1);
-
- Serial.println(" °F");
+  Serial.println(" %");
 
 
 
- Serial.print("Humidity: ");
+  Serial.print("Baselines → Temp: ");
 
- Serial.print(humidityPercent);
+  Serial.print(baselineTemp);
 
- Serial.print(" % (Baseline: ");
+  Serial.print(" °C, Humidity: ");
 
- Serial.print(baselineHumidity);
+  Serial.print(baselineHumidity);
 
- Serial.println("%)");
-
-
-
- Serial.print("Temperature Baseline: ");
-
- Serial.print(baselineTemp, 1);
-
- Serial.println(" °C");
+  Serial.println(" %");
 
 
 
- Serial.print("Distance: ");
+  Serial.print("Distance: ");
 
- Serial.print(distanceCm);
+  Serial.print(distanceCm);
 
- Serial.println(" cm");
+  Serial.println(" cm");
 
-
-
- Serial.println("===========================");
-
- Serial.println();
+  Serial.println("===========================");
 
 
 
- delay(4000); // Update every 2 seconds
+  delay(500);
 
 }
     </code></pre>
